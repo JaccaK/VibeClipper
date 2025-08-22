@@ -3,7 +3,7 @@ VibeClipper is a simple AI clip detecting tool that utilizes Whisper transcripti
 
 It works as follows.
 1. The user provides an MP4 or SRT.
-2. If the file is an MP4 it transcribes the file. If the -srt flag is set, skip this step.
+2. If the file is an MP4 it transcribes the file. If the user sets the -srt flag and uses an SRT file, skip this step.
 3. Then the script breaks the SRT down into the individual lines.
 4. The LLM is first asked to answer a simple true/false question about the 'vibe' of the line.
 5. The LLM is then asked to gauge the vibe from 0 to 100% as an integer.
