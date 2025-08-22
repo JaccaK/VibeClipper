@@ -15,11 +15,11 @@ It works as follows.
 
 *--whisper_model*/*-wm*, Set the whisper model size, default 'medium'.
 
-*--llm_repo*/*-repo*, Set the repo of the LLM on Huggingface.
+*--llm_repo*/*-repo*, Set the repo of the LLM on Huggingface, default "janhq/Jan-v1-4B-GGUF".
 
-*--llm_model*/*-llm*, Set the filename of the LLM in the repo in Huggingface.
+*--llm_model*/*-llm*, Set the filename of the LLM in the repo in Huggingface, default "Jan-v1-4B-Q8_0.gguf".
 
-*--ctx*/*-ctx*, Set the amount of context to give the LLM for phase 2 (step 5 above).
+*--ctx*/*-ctx*, Set the amount of context to give the LLM for phase 2 (step 5 above), default 1024.
 
 *--vibe*/*-vibe*, Set the vibe to scan for, default 'humorous'.
 
@@ -27,7 +27,7 @@ It works as follows.
 
 *--confidence_pct*/*-percent*, Set the confidence percentage for phase 2 (step 5), default 40.
 
-*--repeats*/*-repeat*, Sets how many times to repeat the LLM check (steps 4 and 5).
+*--repeats*/*-repeat*, Sets how many times to repeat the LLM check (steps 4 and 5), default 1.
 
 *--add_fake*/*-fake*, Adds a fake subtitle at the start of the SRT to make dragging the SRT onto NLE timelines easier.
 
