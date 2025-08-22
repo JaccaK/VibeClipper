@@ -44,3 +44,8 @@ The models used for this project are Jan v1 ( https://huggingface.co/janhq/Jan-v
 Whisper uses Pytorch, so if you can install the CUDA version. Otherwise it will take some time to transcribe a video.
 
 Jan v1 is ran via llama-cpp-python, so I recommend also trying to get that up and running with CUDA enabled. 
+
+## Installation
+I will set up an installation guide later, probably. Hopefully, I'll be able to make it just work out of the box. Maybe make a little GUI wrapper.
+
+Libraries used were llama-cpp-python, pytorch, whisper, click, huggingface-hub
