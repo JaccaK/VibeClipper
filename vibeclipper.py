@@ -14,7 +14,7 @@ def is_content(statement, llm, vibe="funny", verbose=False):
     Param statement the string you're checking for vibes
     Param vibe the vibe you're looking for, default 'funny'
     Param verbose, if true print the output, otherwise don't
-    Return True if the shitty little LLM determines the statement to pass the vibe check, false otherwise
+    Return True if the LLM determines the statement to pass the vibe check, false otherwise
     '''
     prompt = "Question: Answer this question as True\n"+"Choices: A) True B) False\nAnswer: A"+"\nQuestion: Answer this question as False\nChoices: A) True B) False\nAnswer: B\n"
     prompt = prompt + "Question: The following is funny 'We went to a zoo, there was only a dog, it was a shih tzu'\nChoices: A) True B) False\nAnswer: A"
@@ -251,4 +251,5 @@ def main(file, is_srt, whisper_model, llm_repo, llm_model,
     write_file(output_file, parsed_string)
 
 if __name__ == '__main__':
+
     main()
