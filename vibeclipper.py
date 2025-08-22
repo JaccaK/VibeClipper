@@ -251,5 +251,4 @@ def main(file, is_srt, whisper_model, llm_repo, llm_model,
     write_file(output_file, parsed_string)
 
 if __name__ == '__main__':
-
     main()
