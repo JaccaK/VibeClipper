@@ -8,7 +8,7 @@ It works as follows.
 4. The LLM is first asked to answer a simple true/false question about the 'vibe' of the line.
 5. The LLM is then asked to gauge the vibe from 0 to 100% as an integer.
 6. Based upon the user's setting the line is saved in the SRT output.
-7. The script finally outputs an SRT in the same directory as the input.
+7. The script outputs an SRT in the same directory as the input after it is done checking each line.
 
 ## Options
 *--is_srt*/*-srt*, This flag allows the user to pass in an SRT instead of a video file, skipping the whisper transcription.
