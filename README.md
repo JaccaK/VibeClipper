@@ -31,8 +31,12 @@ It works as follows.
 
 *--add_fake*/*-fake*, Adds a fake subtitle at the start of the SRT to make dragging the SRT onto NLE timelines easier.
 
-## Example
+## Example usage
 py vibeclipper.py -v "P:/ATH/TO/FILE.mp4"
+
+The -v flag will cause the LLM to output it's "thought process"
+
+The output will be saved as "P:/ATH/TO/FILE.mp4.out.srt"
 
 ## Models
 The models used for this project are Jan v1 ( https://huggingface.co/janhq/Jan-v1-4B-GGUF ) and Whisper medium ( https://huggingface.co/openai/whisper-medium ) by default.
