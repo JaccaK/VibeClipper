@@ -14,7 +14,7 @@ def is_content(statement, llm, vibe="funny", verbose=False):
     Param statement the string you're checking for vibes
     Param vibe the vibe you're looking for, default 'funny'
     Param verbose, if true print the output, otherwise don't
-    Return True if the LLM determines the statement to pass the vibe check, false otherwise
+    Return True if the shitty little LLM determines the statement to pass the vibe check, false otherwise
     '''
     prompt = "Question: Answer this question as True\n"+"Choices: A) True B) False\nAnswer: A"+"\nQuestion: Answer this question as False\nChoices: A) True B) False\nAnswer: B\n"
     prompt = prompt + "Question: The following is funny 'We went to a zoo, there was only a dog, it was a shih tzu'\nChoices: A) True B) False\nAnswer: A"
@@ -99,7 +99,7 @@ def write_file(file, string):
     Param file the file name
     Param strlist the list of strings
     '''
-    with open(file, "w") as f:
+    with open(file, "w", encoding="utf-8") as f:
         f.write(string)
 
 def load_llm(model = "Jan-v1-4B-Q8_0.gguf", ctx = 1024):
@@ -180,13 +180,15 @@ def srt_format_timestamp(seconds: float):
 
 #Heavily modified
 #from https://github.com/openai/whisper/discussions/98#discussioncomment-3726175
-def convert_to_srt(file, model="medium"):
+def convert_to_srt(file, language, model="medium", verbose = False):
     '''
     Given a filepath to an mp4 and the whisper model name (default "medium"), transcribes the video into SRT format.
     Return the transcription of the video in SRT format
     '''
     whisp = whisper.load_model(model)
-    result = whisp.transcribe(file)
+    if language:
+        print(language)
+    result = whisp.transcribe(file, language=language, verbose=verbose)
     count = 0
     string = ""
     for segment in result["segments"]:
@@ -201,7 +203,7 @@ def convert_to_srt(file, model="medium"):
     gc.collect() #We need to really force the model out of memory after we're done with it
     return string
 
-def get_srt(file, model = "medium", is_srt = False):
+def get_srt(file, model = "medium", is_srt = False, save_srt = True, verbose=False, language=None):
     '''
     Given a file, whisper model name, and whether the file is an SRT or an MP4 return an SRT string.
     Param file, the path to the mp4/srt
@@ -211,7 +213,10 @@ def get_srt(file, model = "medium", is_srt = False):
     '''
     if is_srt:
         return read_file(file)
-    return convert_to_srt(file, model=model)
+    srt = convert_to_srt(file, language=language, model=model, verbose=verbose)
+    if save_srt:
+        write_file(file + ".in.srt", srt) #save a copy if transcription
+    return srt
 
 def add_davinci_fakesub(srt):
     '''
@@ -228,21 +233,23 @@ def add_davinci_fakesub(srt):
 
 @click.command()
 @click.option("--is_srt", "-srt", is_flag=True, help="Enables the usage of an already transcribed SRT file for the LLM scan")
+@click.option("--save_srt", "-save", is_flag=True, help="Enables saving the initial transcription immediately after transcrpition.")
 @click.option("--whisper_model", '-wm', default = "medium", help="Sets the Whisper model, defaults to 'medium'")
+@click.option("--language", "-lang", default=None, help="Set the language of the whisper model (ex. en)")
 @click.option("--llm_repo", "-repo", default="janhq/Jan-v1-4B-GGUF", help="Sets the repo of the LLM, default 'janhq/Jan-v1-4B-GGUF'")
 @click.option("--llm_model", "-llm", default="Jan-v1-4B-Q8_0.gguf", help="Sets the filename of the LLM, default 'Jan-v1-4B-Q8_0.gguf'")
 @click.option("--ctx", "-ctx", default= 1024, help="Sets the amount of context for the LLM, default 1024")
 @click.option("--vibe", "-vibe", default="humorous", help="Sets the vibe, default 'humorous'")
-@click.option("--verbose", "-v", is_flag=True, help="Enables verbose mode, displaying the LLM's outputs")
+@click.option("--verbose", "-v", is_flag=True, help="Enables verbose mode, displaying all outputs")
 @click.option("--confidence_pct", "-percent", default = 40, help="Set the confidence percentage as an integer, which is the percentage a line needs to be saved, default 40")
 @click.option("--repeats", "-repeat", default = 1, help="Sets how many times the SRT is ran through the LLM, default 1")
 @click.option("--add_fake", "-fake", is_flag=True, help="Enables a fake subtitle at 0 to 500ms that says 'START', for people who drag SRTs onto timelines")
 @click.argument('file')
-def main(file, is_srt, whisper_model, llm_repo, llm_model,
+def main(file, is_srt, save_srt, whisper_model, language, llm_repo, llm_model,
          ctx, vibe, verbose, confidence_pct, repeats, add_fake):
     if not is_srt:
         print("Transcribing", file)
-    srt = get_srt(file, whisper_model, is_srt)
+    srt = get_srt(file, whisper_model, is_srt, save_srt, verbose, language)
     output_file = file + ".out.srt"
     llm = hf_hub_download(repo_id=llm_repo, filename=llm_model)
     parsed_string = distill_content(srt,llm,repeats,vibe,verbose,confidence_pct,ctx)
