@@ -15,6 +15,8 @@ It works as follows.
 
 *--save_srt*/*-save*, Saves the srt transcribed by whisper.
 
+*--dedupe_srt*/*-dedupe*, Dedupes the whisper transcription, removing repeating contiguous subtitles.
+
 *--whisper_model*/*-wm*, Set the whisper model size, default 'medium'.
 
 *--language*/*-lang*, Sets the language of the whisper model.
@@ -36,13 +38,15 @@ It works as follows.
 *--add_fake*/*-fake*, Adds a fake subtitle at the start of the SRT to make dragging the SRT onto NLE timelines easier.
 
 ## Example usage
-py vibeclipper.py -v -lang en -save "P:/ATH/TO/FILE.mp4"
+py vibeclipper.py -v -lang en -save -dedupe "P:/ATH/TO/FILE.mp4"
 
 The -v flag will cause the LLM and Whisper to output their "thought process"
 
 The -lang flag will set the language of the whisper model, in this case "en" for English.
 
 -save will tell the program to save whatever Whisper transcribes to "P:/ATH/TO/FILE.mp4.in.srt"
+
+-dedupe causes the transcription to run an extra step that removes duplicate lines to avoid spamming the same line over and over again.
 
 The output will be saved as "P:/ATH/TO/FILE.mp4.out.srt"
 
