@@ -14,7 +14,7 @@ def is_content(statement, llm, vibe="funny", verbose=False):
     Param statement the string you're checking for vibes
     Param vibe the vibe you're looking for, default 'funny'
     Param verbose, if true print the output, otherwise don't
-    Return True if the shitty little LLM determines the statement to pass the vibe check, false otherwise
+    Return True if the LLM determines the statement to pass the vibe check, false otherwise
     '''
     prompt = "Question: Answer this question as True\n"+"Choices: A) True B) False\nAnswer: A"+"\nQuestion: Answer this question as False\nChoices: A) True B) False\nAnswer: B\n"
     prompt = prompt + "Question: The following is funny 'We went to a zoo, there was only a dog, it was a shih tzu'\nChoices: A) True B) False\nAnswer: A"
@@ -187,8 +187,8 @@ def convert_to_srt(file, language, model="medium", verbose = False):
     '''
     whisp = whisper.load_model(model)
     if language:
-        print(language)
-    result = whisp.transcribe(file, language=language, verbose=verbose)
+        print("Language:",language)
+    result = whisp.transcribe(file, language=language, verbose=verbose) #consider condition_on_previous_text=false?
     count = 0
     string = ""
     for segment in result["segments"]:
@@ -197,13 +197,35 @@ def convert_to_srt(file, language, model="medium", verbose = False):
         string = string + str(count) + "\n"
         string = string + srt_format_timestamp(segment["start"])
         string = string + " --> " + srt_format_timestamp(segment["end"]) + "\n"
-        string = string + segment["text"].replace("-->", "->").strip() + "\n"
+        string = string + segment["text"].replace("-->", "->").strip() + "\n\n" #maybe fixed?
     del whisp
     torch.cuda.empty_cache()
     gc.collect() #We need to really force the model out of memory after we're done with it
     return string
 
-def get_srt(file, model = "medium", is_srt = False, save_srt = True, verbose=False, language=None):
+
+def dedupe_srt(srt):
+    '''
+    Takes an SRT and removes contiguous duplicated lines.
+    Param srt the SRT to scan
+    Return a deduped SRT
+    '''
+    lines = [x for x in srt.strip().split("\n") if len(x) > 0]
+    if len(lines) == 0:
+        return ""
+    new_srt = ["", lines[0], lines[1], lines[2], ""]
+    for idx in range(5,len(lines),3):
+        if lines[idx] == lines[idx-3]:
+            continue
+        new_srt.append("")
+        new_srt.append(lines[idx-2])
+        new_srt.append(lines[idx-1])
+        new_srt.append(lines[idx])
+        new_srt.append("")
+    return build_srt(new_srt)
+
+
+def get_srt(file, model = "medium", is_srt = False, dedupe = False, save_srt = True, verbose=False, language=None):
     '''
     Given a file, whisper model name, and whether the file is an SRT or an MP4 return an SRT string.
     Param file, the path to the mp4/srt
@@ -214,9 +236,13 @@ def get_srt(file, model = "medium", is_srt = False, save_srt = True, verbose=Fal
     if is_srt:
         return read_file(file)
     srt = convert_to_srt(file, language=language, model=model, verbose=verbose)
+    if dedupe:
+        srt = dedupe_srt(srt)
     if save_srt:
         write_file(file + ".in.srt", srt) #save a copy if transcription
     return srt
+
+
 
 def add_davinci_fakesub(srt):
     '''
@@ -234,6 +260,7 @@ def add_davinci_fakesub(srt):
 @click.command()
 @click.option("--is_srt", "-srt", is_flag=True, help="Enables the usage of an already transcribed SRT file for the LLM scan")
 @click.option("--save_srt", "-save", is_flag=True, help="Enables saving the initial transcription immediately after transcrpition.")
+@click.option("--dedupe_srt", "-dedupe", is_flag=True, help="Remove back to back duplicate lines in the whisper output.")
 @click.option("--whisper_model", '-wm', default = "medium", help="Sets the Whisper model, defaults to 'medium'")
 @click.option("--language", "-lang", default=None, help="Set the language of the whisper model (ex. en)")
 @click.option("--llm_repo", "-repo", default="janhq/Jan-v1-4B-GGUF", help="Sets the repo of the LLM, default 'janhq/Jan-v1-4B-GGUF'")
@@ -245,11 +272,11 @@ def add_davinci_fakesub(srt):
 @click.option("--repeats", "-repeat", default = 1, help="Sets how many times the SRT is ran through the LLM, default 1")
 @click.option("--add_fake", "-fake", is_flag=True, help="Enables a fake subtitle at 0 to 500ms that says 'START', for people who drag SRTs onto timelines")
 @click.argument('file')
-def main(file, is_srt, save_srt, whisper_model, language, llm_repo, llm_model,
+def main(file, is_srt, save_srt, dedupe_srt, whisper_model, language, llm_repo, llm_model,
          ctx, vibe, verbose, confidence_pct, repeats, add_fake):
     if not is_srt:
         print("Transcribing", file)
-    srt = get_srt(file, whisper_model, is_srt, save_srt, verbose, language)
+    srt = get_srt(file, whisper_model, is_srt, dedupe_srt, save_srt, verbose, language)
     output_file = file + ".out.srt"
     llm = hf_hub_download(repo_id=llm_repo, filename=llm_model)
     parsed_string = distill_content(srt,llm,repeats,vibe,verbose,confidence_pct,ctx)
