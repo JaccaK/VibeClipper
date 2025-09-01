@@ -8,7 +8,7 @@ from huggingface_hub import hf_hub_download
 
 
 
-def is_content(statement, llm, vibe="funny", verbose=False):
+def is_content(statement, llm, confidence_pct = 50, vibe="funny", verbose=False):
     '''
     Asks a large language model about a statement's vibe as a multiple choice question. Defaults to "funny"
     Param statement the string you're checking for vibes
@@ -18,7 +18,7 @@ def is_content(statement, llm, vibe="funny", verbose=False):
     '''
     prompt = "Question: Answer this question as True\n"+"Choices: A) True B) False\nAnswer: A"+"\nQuestion: Answer this question as False\nChoices: A) True B) False\nAnswer: B\n"
     prompt = prompt + "Question: The following is funny 'We went to a zoo, there was only a dog, it was a shih tzu'\nChoices: A) True B) False\nAnswer: A"
-    prompt = prompt + "\nQuestion: The following is "+vibe+" '"+statement+"'. Be 90% sure\nChoices: A) True B) False\n"
+    prompt = prompt + "\nQuestion: The following is sentence is at least "+ str(confidence_pct) + "% " + vibe + " '"+statement+"'.\nChoices: A) True B) False\n"
     text_output = prompt_llm(prompt, llm, verbose = True, tokens=8) #Less tokens to stop it from over-responding.
     answer_idx = 11
     answer_line = text_output.split("\n")[answer_idx]
@@ -129,7 +129,7 @@ def parse_content(text, llm, vibe = "funny", verbose=False, confidence_pct = 75)
     length = len(lines)
     for idx in range(2,length,3):
         print("\nCURRENT LINE:",str((idx+1)//3)+"/"+str(length//3),"PCT:",(idx+1)/length,"\n")
-        if is_content(lines[idx], llm ,vibe,verbose) and confirm_content(lines[idx], llm, vibe, verbose) >= confidence_pct:
+        if is_content(lines[idx], llm, confidence_pct ,vibe,verbose) and confirm_content(lines[idx], llm, vibe, verbose) >= confidence_pct:
             vibe_check.append("") #srt files have a line above and a line below every subtitle.
             vibe_check.append(lines[idx-2]) # We want the srt index, timestamp, and actual phrase, which are the 3 indexes
             vibe_check.append(lines[idx-1])
