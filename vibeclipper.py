@@ -18,14 +18,26 @@ def is_content(statement, llm, confidence_pct = 50, vibe="funny", verbose=False)
     '''
     prompt = "Question: Answer this question as True\n"+"Choices: A) True B) False\nAnswer: A"+"\nQuestion: Answer this question as False\nChoices: A) True B) False\nAnswer: B\n"
     prompt = prompt + "Question: The following is funny 'We went to a zoo, there was only a dog, it was a shih tzu'\nChoices: A) True B) False\nAnswer: A"
-    prompt = prompt + "\nQuestion: The following is sentence is at least "+ str(confidence_pct) + "% " + vibe + " '"+statement+"'.\nChoices: A) True B) False\n"
+    prompt = prompt + "\nQuestion: The following block of subtitles are at least "+ str(confidence_pct) + "% " + vibe + " '"+statement+"'.\nChoices: A) True B) False\n"
     text_output = prompt_llm(prompt, llm, verbose = True, tokens=8) #Less tokens to stop it from over-responding.
-    answer_idx = 11
+    answer_idx = find_line(text_output, "Answer:")
+    print(answer_idx)
     answer_line = text_output.split("\n")[answer_idx]
     answer = answer_line[1:] #Doing a slice here skips the 'A' in 'Answer' allowing us to look for 'A' with the in operator later.
     if verbose:                                     
         print(text_output)                 
     return "A" in answer
+
+def find_line(text, target):
+    lines = text.split("\n")
+    #length = len(lines)
+    lines.reverse()
+    count = 0
+    for line in lines:
+        count += 1
+        if target in line:
+            return -count
+    return 0
 
 def confirm_content(statement, llm, vibe="funny", verbose=False):
     '''
@@ -35,7 +47,7 @@ def confirm_content(statement, llm, vibe="funny", verbose=False):
     Param verbose prints the output of the LLM if true, default false
     Return a whole number representing a percentage (hopefully) from 0 to 100
     '''
-    prompt = "The determine if the following line is "+vibe+" '" +statement+"' Give me a percentage from 0% to 100% of how "+vibe+" this line is. Only return the percentage on a new line."
+    prompt = "The determine if the following block of subtitles are "+vibe+" '" +statement+"' Give me a percentage from 0% to 100% of how "+vibe+" this line is. Only return the percentage on a new line."
     prompt = prompt + " If you think it's 50% "+vibe+", reply with \"50\" and so on." +" Do not return anything else.\n<|im_end|>\n<think>"
     text_output = prompt_llm(prompt, llm, verbose=True) #The prompt needs to echo to prevent errors. Will fallback to 50 if the llm fails.
     if verbose:
@@ -102,7 +114,7 @@ def write_file(file, string):
     with open(file, "w", encoding="utf-8") as f:
         f.write(string)
 
-def load_llm(model = "Jan-v1-4B-Q8_0.gguf", ctx = 1024):
+def load_llm(model = "Jan-v1-4B-Q8_0.gguf", ctx = 2048):
     '''
     Creates a Llama object containing our LLM which we can then use to prompt.
     Param model, the path of the model
@@ -114,7 +126,7 @@ def load_llm(model = "Jan-v1-4B-Q8_0.gguf", ctx = 1024):
       n_ctx=ctx,
     )
 
-def parse_content(text, llm, vibe = "funny", verbose=False, confidence_pct = 75): #Consider adding is_content skip keyword param
+def parse_content(text, llm, vibe = "funny", verbose=False, confidence_pct = 75, group_srt = True): #Consider adding is_content skip keyword param
     '''
     Parses an SRT for successful vibe checks
     Param text the string from the SRT
@@ -124,21 +136,35 @@ def parse_content(text, llm, vibe = "funny", verbose=False, confidence_pct = 75)
     Param confidence_pct the percentage of vibe to search for as a whole number
     Return a list of successful vibe checks.
     '''
-    lines = [x for x in text.strip().split("\n") if len(x) > 0] # Split srt on new line and remove empty lines
+    lines = []
+    if group_srt:
+        lines = create_lines(text, 1024)
+    else:
+        lines = text.strip().split("\n\n")
     vibe_check = []
     length = len(lines)
-    for idx in range(2,length,3):
-        print("\nCURRENT LINE:",str((idx+1)//3)+"/"+str(length//3),"PCT:",(idx+1)/length,"\n")
+    for idx in range(length):
+        print("\nCURRENT LINE:",str((idx+1))+"/"+str(length),"PCT:",(idx+1)/length,"\n")
         if is_content(lines[idx], llm, confidence_pct ,vibe,verbose) and confirm_content(lines[idx], llm, vibe, verbose) >= confidence_pct:
-            vibe_check.append("") #srt files have a line above and a line below every subtitle.
-            vibe_check.append(lines[idx-2]) # We want the srt index, timestamp, and actual phrase, which are the 3 indexes
-            vibe_check.append(lines[idx-1])
             vibe_check.append(lines[idx])
-            vibe_check.append("") #without the empty lines, it simply isn't formatted correctly.
     print("DONE:",len(vibe_check),"lines saved.")
     return vibe_check
 
-def distill_content(text, llm_model, amount = 1, vibe = "funny", verbose=False, confidence_pct = 75, ctx = 1024):
+def create_lines(text, max_length): #format this better idiot
+    lines = text.strip().split("\n\n")
+    string = ''
+    for line in lines:
+        line 
+    output = []
+    string = ''
+    for line in lines:
+        string = string + '\n' + line + '\n'
+        if len(string) > max_length:
+            output.append(string)
+            string = ''
+    return output
+
+def distill_content(text, llm_model, amount = 1, vibe = "funny", verbose=False, confidence_pct = 75, ctx = 4096, group_lines = True):
     '''
     Repeatedly analyzes the srt for the vibe an amount of times.
     Param text, the srt text
@@ -154,7 +180,7 @@ def distill_content(text, llm_model, amount = 1, vibe = "funny", verbose=False, 
     output = text
     str_list = []
     for x in range(amount):
-        str_list = parse_content(output, llm, vibe, verbose, confidence_pct)
+        str_list = parse_content(output, llm, vibe, verbose, confidence_pct, group_lines)
         output = build_srt(str_list)
     return output
 
@@ -265,21 +291,22 @@ def add_davinci_fakesub(srt):
 @click.option("--language", "-lang", default=None, help="Set the language of the whisper model (ex. en)")
 @click.option("--llm_repo", "-repo", default="janhq/Jan-v1-4B-GGUF", help="Sets the repo of the LLM, default 'janhq/Jan-v1-4B-GGUF'")
 @click.option("--llm_model", "-llm", default="Jan-v1-4B-Q8_0.gguf", help="Sets the filename of the LLM, default 'Jan-v1-4B-Q8_0.gguf'")
-@click.option("--ctx", "-ctx", default= 1024, help="Sets the amount of context for the LLM, default 1024")
+@click.option("--ctx", "-ctx", default= 4096, help="Sets the amount of context for the LLM, default 1024")
 @click.option("--vibe", "-vibe", default="humorous", help="Sets the vibe, default 'humorous'")
 @click.option("--verbose", "-v", is_flag=True, help="Enables verbose mode, displaying all outputs")
 @click.option("--confidence_pct", "-percent", default = 40, help="Set the confidence percentage as an integer, which is the percentage a line needs to be saved, default 40")
 @click.option("--repeats", "-repeat", default = 1, help="Sets how many times the SRT is ran through the LLM, default 1")
 @click.option("--add_fake", "-fake", is_flag=True, help="Enables a fake subtitle at 0 to 500ms that says 'START', for people who drag SRTs onto timelines")
+@click.option("--group_lines", "-group", is_flag=True, help="Processes multiple lines of subtitles at once")
 @click.argument('file')
 def main(file, is_srt, save_srt, dedupe_srt, whisper_model, language, llm_repo, llm_model,
-         ctx, vibe, verbose, confidence_pct, repeats, add_fake):
+         ctx, vibe, verbose, confidence_pct, repeats, add_fake, group_lines):
     if not is_srt:
         print("Transcribing", file)
     srt = get_srt(file, whisper_model, is_srt, dedupe_srt, save_srt, verbose, language)
     output_file = file + ".out.srt"
     llm = hf_hub_download(repo_id=llm_repo, filename=llm_model)
-    parsed_string = distill_content(srt,llm,repeats,vibe,verbose,confidence_pct,ctx)
+    parsed_string = distill_content(srt,llm,repeats,vibe,verbose,confidence_pct,ctx,group_lines)
     if add_fake: #Probably unneeded?
         parsed_string = add_davinci_fakesub(parsed_string)
     write_file(output_file, parsed_string)
