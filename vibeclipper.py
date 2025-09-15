@@ -18,10 +18,9 @@ def is_content(statement, llm, confidence_pct = 50, vibe="funny", verbose=False)
     '''
     prompt = "Question: Answer this question as True\n"+"Choices: A) True B) False\nAnswer: A"+"\nQuestion: Answer this question as False\nChoices: A) True B) False\nAnswer: B\n"
     prompt = prompt + "Question: The following is funny 'We went to a zoo, there was only a dog, it was a shih tzu'\nChoices: A) True B) False\nAnswer: A"
-    prompt = prompt + "\nQuestion: The following block of subtitles are at least "+ str(confidence_pct) + "% " + vibe + " '"+statement+"'.\nChoices: A) True B) False\n"
+    prompt = prompt + "\nQuestion: Anything in the following block of subtitles are at least "+ str(confidence_pct) + "% " + vibe + " '"+statement+"'.\nChoices: A) True B) False\n"
     text_output = prompt_llm(prompt, llm, verbose = True, tokens=8) #Less tokens to stop it from over-responding.
     answer_idx = find_line(text_output, "Answer:")
-    print(answer_idx)
     answer_line = text_output.split("\n")[answer_idx]
     answer = answer_line[1:] #Doing a slice here skips the 'A' in 'Answer' allowing us to look for 'A' with the in operator later.
     if verbose:                                     
@@ -47,8 +46,8 @@ def confirm_content(statement, llm, vibe="funny", verbose=False):
     Param verbose prints the output of the LLM if true, default false
     Return a whole number representing a percentage (hopefully) from 0 to 100
     '''
-    prompt = "The determine if the following block of subtitles are "+vibe+" '" +statement+"' Give me a percentage from 0% to 100% of how "+vibe+" this line is. Only return the percentage on a new line."
-    prompt = prompt + " If you think it's 50% "+vibe+", reply with \"50\" and so on." +" Do not return anything else.\n<|im_end|>\n<think>"
+    prompt = "The determine if any of the subtitles in the following block of subtitles is "+vibe+" '" +statement+"' Give a percentage from 0% to 100%. Only return the percentage on a new line."
+    prompt = prompt + " If you think it's 50% "+vibe+", reply with \"50\" and so on." +" This is not a \"percentage chance\". Do not return anything else.\n<|im_end|>\n<think>"
     text_output = prompt_llm(prompt, llm, verbose=True) #The prompt needs to echo to prevent errors. Will fallback to 50 if the llm fails.
     if verbose:
         print(text_output)
@@ -91,8 +90,7 @@ def read_file(file):
     Given a file path 'file', returns the text in 'file.'
     Return the text in 'file.'
     '''
-    p = Path(file)
-    with p.open() as f:
+    with open(file, "r", encoding="utf-8") as f:
         return f.read()
 
 def build_srt(string_list):
@@ -126,7 +124,7 @@ def load_llm(model = "Jan-v1-4B-Q8_0.gguf", ctx = 2048):
       n_ctx=ctx,
     )
 
-def parse_content(text, llm, vibe = "funny", verbose=False, confidence_pct = 75, group_srt = True): #Consider adding is_content skip keyword param
+def parse_content(text, llm, vibe = "funny", verbose=False, confidence_pct = 75, group_srt = True, skip_initial = False): #Consider adding is_content skip keyword param
     '''
     Parses an SRT for successful vibe checks
     Param text the string from the SRT
@@ -145,7 +143,7 @@ def parse_content(text, llm, vibe = "funny", verbose=False, confidence_pct = 75,
     length = len(lines)
     for idx in range(length):
         print("\nCURRENT LINE:",str((idx+1))+"/"+str(length),"PCT:",(idx+1)/length,"\n")
-        if is_content(lines[idx], llm, confidence_pct ,vibe,verbose) and confirm_content(lines[idx], llm, vibe, verbose) >= confidence_pct:
+        if (skip_initial or is_content(lines[idx], llm, confidence_pct ,vibe,verbose)) and confirm_content(lines[idx], llm, vibe, verbose) >= confidence_pct:
             vibe_check.append(lines[idx])
     print("DONE:",len(vibe_check),"lines saved.")
     return vibe_check
@@ -164,7 +162,7 @@ def create_lines(text, max_length): #format this better idiot
             string = ''
     return output
 
-def distill_content(text, llm_model, amount = 1, vibe = "funny", verbose=False, confidence_pct = 75, ctx = 4096, group_lines = True):
+def distill_content(text, llm_model, amount = 1, vibe = "funny", verbose=False, confidence_pct = 75, ctx = 4096, group_lines = True, skip_initial = False):
     '''
     Repeatedly analyzes the srt for the vibe an amount of times.
     Param text, the srt text
@@ -180,7 +178,7 @@ def distill_content(text, llm_model, amount = 1, vibe = "funny", verbose=False, 
     output = text
     str_list = []
     for x in range(amount):
-        str_list = parse_content(output, llm, vibe, verbose, confidence_pct, group_lines)
+        str_list = parse_content(output, llm, vibe, verbose, confidence_pct, group_lines, skip_initial)
         output = build_srt(str_list)
     return output
 
@@ -298,15 +296,16 @@ def add_davinci_fakesub(srt):
 @click.option("--repeats", "-repeat", default = 1, help="Sets how many times the SRT is ran through the LLM, default 1")
 @click.option("--add_fake", "-fake", is_flag=True, help="Enables a fake subtitle at 0 to 500ms that says 'START', for people who drag SRTs onto timelines")
 @click.option("--group_lines", "-group", is_flag=True, help="Processes multiple lines of subtitles at once")
+@click.option("--skip_initial", "-skip", is_flag=True, help="Skips the initial True/False step for the analysis")
 @click.argument('file')
 def main(file, is_srt, save_srt, dedupe_srt, whisper_model, language, llm_repo, llm_model,
-         ctx, vibe, verbose, confidence_pct, repeats, add_fake, group_lines):
+         ctx, vibe, verbose, confidence_pct, repeats, add_fake, group_lines, skip_initial):
     if not is_srt:
         print("Transcribing", file)
     srt = get_srt(file, whisper_model, is_srt, dedupe_srt, save_srt, verbose, language)
     output_file = file + ".out.srt"
     llm = hf_hub_download(repo_id=llm_repo, filename=llm_model)
-    parsed_string = distill_content(srt,llm,repeats,vibe,verbose,confidence_pct,ctx,group_lines)
+    parsed_string = distill_content(srt,llm,repeats,vibe,verbose,confidence_pct,ctx,group_lines,skip_initial)
     if add_fake: #Probably unneeded?
         parsed_string = add_davinci_fakesub(parsed_string)
     write_file(output_file, parsed_string)
