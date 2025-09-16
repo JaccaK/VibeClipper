@@ -42,7 +42,7 @@ It works as follows.
 *--skip_initial*/*-skip*, Skips the True/False step allowing for more finegrain results.
 
 ## Example usage
-py vibeclipper.py -v -lang en -save -dedupe "P:/ATH/TO/FILE.mp4"
+py vibeclipper.py -v -lang en -save -dedupe -group "P:/ATH/TO/FILE.mp4"
 
 The -v flag will cause the LLM and Whisper to output their "thought process"
 
@@ -52,13 +52,15 @@ The -lang flag will set the language of the whisper model, in this case "en" for
 
 -dedupe causes the transcription to run an extra step that removes duplicate lines to avoid spamming the same line over and over again.
 
+-group groups contiguous sets of subtitles for faster processing.
+
 The output will be saved as "P:/ATH/TO/FILE.mp4.out.srt"
 
 ## Usage Recommendations
 
-I'd recommend pretty much always running this with -v, -save, and -lang. Additionally, it can be helpful to change -percent to something 50 or higher.
+I'd recommend pretty much always running this with -v, -save, -lang, and -group. Additionally, it can be helpful to change -percent to something 50 or higher.
 
--v is going to be useful for telling how far along the Whisper transcription actually is. -save will make sure you have the transcriptions later if you decide to run the llm later or if something screws up. By default whisper will detect language using the first 30 seconds of the file. This can be detrimental, so doing '-lang en' if you're processing a primarily English video can skip this step and set up the language correctly. And finally, the default percent is 40 which means anything that the LLM thinks is "40% humorous" is kept, which can keep more than you may want to look through (It's still often only 10-20% of total lines even on 40, though).
+-v is going to be useful for telling how far along the Whisper transcription actually is. -save will make sure you have the transcriptions later if you decide to run the llm later or if something screws up. By default whisper will detect language using the first 30 seconds of the file. This can be detrimental, so doing '-lang en' if you're processing a primarily English video can skip this step and set up the language correctly. Group just speeds up the entire process. And finally, the default percent is 40 which means anything that the LLM thinks is "40% humorous" is kept, which can keep more than you may want to look through (It's still often only 10-20% of total lines even on 40, though).
 
 I recommend dragging both the original video file and SRT output into LosslessCut and choosing "Convert subtitles into segments." This is a hell of a lot faster than trying to do anything similar in DaVinci Resolve (as an example). You can set the hotkey "Jump & seek to next segment" to quickly review. You can get LosslessCut here: https://mifi.github.io/lossless-cut/
 
