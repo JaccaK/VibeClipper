@@ -37,6 +37,10 @@ It works as follows.
 
 *--add_fake*/*-fake*, Adds a fake subtitle at the start of the SRT to make dragging the SRT onto NLE timelines easier.
 
+*--group_lines*/*-group*, Processes batches of subtitles, cutting down on runtime.
+
+*--skip_initial*/*-skip*, Skips the True/False step allowing for more finegrain results.
+
 ## Example usage
 py vibeclipper.py -v -lang en -save -dedupe "P:/ATH/TO/FILE.mp4"
 
