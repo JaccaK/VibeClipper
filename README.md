@@ -74,6 +74,27 @@ Whisper uses Pytorch, so if you can install the CUDA version. Otherwise it will 
 Jan v1 is ran via llama-cpp-python, so I recommend also trying to get that up and running with CUDA enabled. 
 
 ## Installation
-I will set up an installation guide later, probably. Hopefully, I'll be able to make it just work out of the box. Maybe make a little GUI wrapper.
 
-Libraries used were llama-cpp-python, pytorch, whisper, click, huggingface-hub
+Obviously you need Python, 3.9 or better I think? Make sure to add to environment variables on install - it's a little checkbox.
+
+You'll need to install Visual Studio 2022 with the c++ desktop workload to pip install most of this stuff.
+
+You'll also need FFMpeg ( https://www.wikihow.com/Install-FFmpeg-on-Windows for example)
+
+
+*Do the following in command prompt*
+
+- pip3 install torch torchvision --index-url https://download.pytorch.org/whl/cu126
+
+- pip install llama-cpp-python --extra-index-url https://abetlen.github.io/llama-cpp-python/whl/cu125
+
+- pip install ffmpeg
+
+- pip install openai-whisper
+
+- pip install click 
+
+- pip install huggingface-hub
+
+
+Hopefully you now have the ability to run the script.
