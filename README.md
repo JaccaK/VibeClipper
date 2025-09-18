@@ -75,7 +75,7 @@ Jan v1 is ran via llama-cpp-python, so I recommend also trying to get that up an
 
 ## Installation
 
-Obviously you need Python, 3.9 or better I think? Make sure to add to environment variables on install - it's a little checkbox.
+You need Python, 3.9 or better I think? Make sure to add to environment variables on install - it's a little checkbox.
 
 You'll need to install Visual Studio 2022 with the c++ desktop workload to pip install most of this stuff.
 
